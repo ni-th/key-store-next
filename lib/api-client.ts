@@ -1,8 +1,17 @@
 // lib/api-client.ts
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 class ApiClient {
   private client: AxiosInstance;
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (value: any) => void;
+    reject: (reason?: any) => void;
+    config: any;
+  }> = [];
+  private router: AppRouterInstance | null = null;
+  private currentUser: any = null;
 
   constructor() {
     this.client = axios.create({
@@ -12,30 +21,48 @@ class ApiClient {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      withCredentials: true, // 🔑 CRITICAL: This sends/receives cookies automatically
+      withCredentials: true,
     });
 
-    // 🛡️ Response interceptor for handling token refresh
+    // Response interceptor for token refresh
     this.client.interceptors.response.use(
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
         
-        // If error is 401 and we haven't tried to refresh yet
         if (error.response?.status === 401 && !originalRequest._retry) {
+          if (originalRequest.url?.includes('/auth/refresh')) {
+            this.clearAuth();
+            // Use router if available
+            if (this.router) {
+              this.router.push('/login');
+            }
+            return Promise.reject(error);
+          }
+
+          if (this.isRefreshing) {
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject, config: originalRequest });
+            });
+          }
+
           originalRequest._retry = true;
-          
+          this.isRefreshing = true;
+
           try {
-            // Try to refresh tokens (cookies are sent automatically)
-            await this.refreshTokens();
-            
-            // Retry the original request
+            await this.client.post('/auth/refresh', {});
+            this.processQueue(null);
             return this.client(originalRequest);
           } catch (refreshError) {
-            // Refresh failed - redirect to login
+            this.processQueue(refreshError);
             this.clearAuth();
-            window.location.href = '/login';
+            // Use router if available
+            if (this.router) {
+              this.router.push('/login');
+            }
             return Promise.reject(refreshError);
+          } finally {
+            this.isRefreshing = false;
           }
         }
         
@@ -44,71 +71,59 @@ class ApiClient {
     );
   }
 
-  // 🔄 Refresh tokens using the refresh endpoint
-  private async refreshTokens(): Promise<void> {
-    try {
-      // Cookies are sent automatically with withCredentials: true
-      await this.client.post('/auth/refresh', {});
-    } catch (error) {
-      throw new Error('Token refresh failed');
-    }
+  // Method to set router instance
+  setRouter(router: AppRouterInstance) {
+    this.router = router;
   }
 
-  // 🚪 Clear auth state (redirect to login)
-  private clearAuth(): void {
-    // Remove any stored user data from localStorage/sessionStorage if you have any
-    localStorage.removeItem('user');
-    sessionStorage.removeItem('user');
+  private processQueue(error: any | null) {
+    this.failedQueue.forEach(pending => {
+      if (error) {
+        pending.reject(error);
+      } else {
+        this.client(pending.config).then(pending.resolve).catch(pending.reject);
+      }
+    });
+    this.failedQueue = [];
   }
 
-  // ✨ No setToken method needed anymore - cookies handle it!
+  private clearAuth() {
+    this.currentUser = null;
+  }
 
-  // GET
+  setCurrentUser(user: any) {
+    this.currentUser = user;
+  }
+
+  getCurrentUser() {
+    return this.currentUser;
+  }
+
   async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response: AxiosResponse<T> = await this.client.get(url, config);
     return response.data;
   }
 
-  // POST
-  async post<T = any>(
-    url: string,
-    data?: any,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
+  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     const response: AxiosResponse<T> = await this.client.post(url, data, config);
     return response.data;
   }
 
-  // PUT
-  async put<T = any>(
-    url: string,
-    data?: any,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
+  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     const response: AxiosResponse<T> = await this.client.put(url, data, config);
     return response.data;
   }
 
-  // PATCH
-  async patch<T = any>(
-    url: string,
-    data?: any,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
+  async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     const response: AxiosResponse<T> = await this.client.patch(url, data, config);
     return response.data;
   }
 
-  // DELETE
-  async delete<T = any>(
-    url: string,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
+  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response: AxiosResponse<T> = await this.client.delete(url, config);
     return response.data;
   }
 }
 
-// singleton
 export const apiClient = new ApiClient();
 export default apiClient;
