@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Button } from "../ui/button";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -119,6 +120,9 @@ export default function LoginForm() {
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
+        <Button>
+          s
+        </Button>
       </form>
     </div>
   );
