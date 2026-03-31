@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Moon, ShoppingCart, Sun } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -10,15 +11,47 @@ import { Button } from "@/components/ui/button";
 
 export default function Navbar() {
   const { data: session } = useSession();
+  const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
   const isDark = resolvedTheme === "dark";
   const userInitial = session?.user?.name?.[0]?.toUpperCase() || "U";
+
+  const handleLogout = async () => {
+    setIsMenuOpen(false);
+    await signOut({ redirect: false });
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <header className="border-b">
@@ -44,13 +77,44 @@ export default function Navbar() {
           </Button>
 
           {session?.user ? (
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/dashboard" aria-label="Profile">
+            <div className="relative" ref={menuRef}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Open user menu"
+                aria-expanded={isMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setIsMenuOpen((prev) => !prev)}
+              >
                 <Avatar size="sm">
                   <AvatarFallback>{userInitial}</AvatarFallback>
                 </Avatar>
-              </Link>
-            </Button>
+              </Button>
+
+              {isMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 z-50 mt-2 w-40 rounded-md border bg-background p-1 shadow-md"
+                >
+                  <Link
+                    href="/settings"
+                    role="menuitem"
+                    className="block rounded-sm px-3 py-2 text-sm hover:bg-muted"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Settings
+                  </Link>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="block w-full rounded-sm px-3 py-2 text-left text-sm hover:bg-muted"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <Button asChild>
               <Link href="/login">Login</Link>

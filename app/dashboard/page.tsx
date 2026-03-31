@@ -1,5 +1,4 @@
 "use client";
-
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -8,8 +7,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 
 export default function Dashboard() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
+  const isLoadingSession = status === "loading";
+
+  const welcomeName = session?.user?.name || "User";
+  const welcomeEmail = session?.user?.email || "No email available";
 
   const handleLogout = async () => {
     await signOut({
@@ -29,8 +32,12 @@ export default function Dashboard() {
             </AvatarFallback>
           </Avatar>
           <div>
-            <CardTitle>Welcome {session?.user?.name || "User"}</CardTitle>
-            <CardDescription>{session?.user?.email || "No email available"}</CardDescription>
+            <CardTitle>
+              Welcome {isLoadingSession ? <span className="ml-2 inline-block h-5 w-24 animate-pulse rounded bg-muted align-middle" /> : welcomeName}
+            </CardTitle>
+            <CardDescription>
+              {isLoadingSession ? <span className="inline-block h-4 w-44 animate-pulse rounded bg-muted" /> : welcomeEmail}
+            </CardDescription>
           </div>
         </CardHeader>
         <Separator />
