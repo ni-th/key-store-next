@@ -1,13 +1,10 @@
 import Link from "next/link";
-import Navbar from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
-
       <main className="mx-auto w-full max-w-6xl px-4 py-12">
         <section className="space-y-4 text-center">
           <h1 className="text-4xl font-bold tracking-tight">Securely manage your keys</h1>
