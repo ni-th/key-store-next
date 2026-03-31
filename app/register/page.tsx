@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import api from "@/lib/api";
+import api from "@/lib/api-client";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
