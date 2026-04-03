@@ -6,7 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Moon, ShoppingCart, Sun } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
 export default function Navbar() {
@@ -45,6 +45,7 @@ export default function Navbar() {
 
   const isDark = resolvedTheme === "dark";
   const userInitial = session?.user?.name?.[0]?.toUpperCase() || "U";
+  const userImage = session?.user?.image || session?.user?.avatar;
 
   const handleLogout = async () => {
     setIsMenuOpen(false);
@@ -87,6 +88,12 @@ export default function Navbar() {
                 onClick={() => setIsMenuOpen((prev) => !prev)}
               >
                 <Avatar size="sm">
+                  {userImage ? (
+                    <AvatarImage
+                      src={userImage}
+                      alt={session?.user?.name || "User profile picture"}
+                    />
+                  ) : null}
                   <AvatarFallback>{userInitial}</AvatarFallback>
                 </Avatar>
               </Button>

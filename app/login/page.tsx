@@ -15,6 +15,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
@@ -50,6 +51,90 @@ export default function LoginForm() {
       setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    setGoogleLoading(true);
+
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+
+    if (!apiBaseUrl) {
+      setError("API URL is not configured.");
+      setGoogleLoading(false);
+      return;
+    }
+
+    const popup = window.open(
+      `${apiBaseUrl}/api/auth/google`,
+      "google-login",
+      "width=520,height=720"
+    );
+
+    if (!popup) {
+      setError("Popup blocked. Please allow popups and try again.");
+      setGoogleLoading(false);
+      return;
+    }
+
+    try {
+      const isAuthenticated = await new Promise<boolean>((resolve) => {
+        const maxAttempts = 60;
+        let attempts = 0;
+
+        const interval = window.setInterval(async () => {
+          attempts += 1;
+
+          if (popup.closed) {
+            window.clearInterval(interval);
+            resolve(false);
+            return;
+          }
+
+          try {
+            const response = await fetch(`${apiBaseUrl}/api/auth/profile`, {
+              method: "GET",
+              credentials: "include",
+            });
+
+            if (response.ok) {
+              window.clearInterval(interval);
+              popup.close();
+              resolve(true);
+              return;
+            }
+          } catch {
+            // Keep polling until timeout or success.
+          }
+
+          if (attempts >= maxAttempts) {
+            window.clearInterval(interval);
+            popup.close();
+            resolve(false);
+          }
+        }, 1000);
+      });
+
+      if (!isAuthenticated) {
+        setError("Google login was not completed. Please try again.");
+        return;
+      }
+
+      const result = await signIn("google-session", { redirect: false });
+
+      if (result?.error || !result?.ok) {
+        setError("Google login failed. Please try again.");
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (error) {
+      console.error("Google login error:", error);
+      setError("An error occurred during Google login.");
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -116,6 +201,16 @@ export default function LoginForm() {
 
             <Button type="submit" disabled={loading} className="w-full">
               {loading ? "Signing in..." : "Sign in"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={googleLoading}
+              onClick={handleGoogleLogin}
+            >
+              {googleLoading ? "Connecting to Google..." : "Continue with Google"}
             </Button>
           </form>
         </CardContent>

@@ -58,6 +58,41 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
+    CredentialsProvider({
+      id: "google-session",
+      name: "Google Session",
+      credentials: {},
+      async authorize(_, req) {
+        try {
+          const cookieHeader = req.headers?.cookie;
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+            },
+            cache: "no-store",
+          });
+
+          if (!response.ok) {
+            return null;
+          }
+
+          const user = await response.json();
+
+          return {
+            id: String(user.id),
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            image: user.avatar,
+          };
+        } catch (error) {
+          console.error("Google session authorize error:", error);
+          return null;
+        }
+      },
+    }),
   ],
   pages: {
     signIn: "/login",
@@ -72,6 +107,7 @@ export const authOptions: NextAuthOptions = {
         token.name = user.name;
         token.role = user.role;
         token.accessToken = user.accessToken;
+        token.image = user.image;
       }
       return token;
     },
@@ -82,6 +118,7 @@ export const authOptions: NextAuthOptions = {
         email: token.email as string,
         name: token.name as string,
         role: token.role as string,
+        image: token.image as string,
       };
       session.accessToken = token.accessToken as string;
       return session;
