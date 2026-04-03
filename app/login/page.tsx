@@ -66,8 +66,17 @@ export default function LoginForm() {
       return;
     }
 
+    try {
+      await fetch(`${apiBaseUrl}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // If there is no active backend session, continue with OAuth flow.
+    }
+
     const popup = window.open(
-      `${apiBaseUrl}/api/auth/google`,
+      `${apiBaseUrl}/api/auth/google?prompt=select_account`,
       "google-login",
       "width=520,height=720"
     );
@@ -218,3 +227,5 @@ export default function LoginForm() {
     </div>
   );
 }
+
+

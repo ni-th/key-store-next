@@ -49,6 +49,20 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     setIsMenuOpen(false);
+
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+
+    if (apiBaseUrl) {
+      try {
+        await fetch(`${apiBaseUrl}/api/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+        });
+      } catch (error) {
+        console.error("Backend logout failed:", error);
+      }
+    }
+
     await signOut({ redirect: false });
     router.push("/login");
     router.refresh();
@@ -132,3 +146,4 @@ export default function Navbar() {
     </header>
   );
 }
+

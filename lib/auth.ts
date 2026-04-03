@@ -48,6 +48,8 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.name,
             role: user.role,
+            image: user.avatar,
+            avatar: user.avatar,
             accessToken: access_token,  // Store token in user object
             refreshToken: refresh_token,  // Store refresh token in user object
           };
@@ -86,6 +88,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role,
             image: user.avatar,
+            avatar: user.avatar,
           };
         } catch (error) {
           console.error("Google session authorize error:", error);
@@ -119,6 +122,7 @@ export const authOptions: NextAuthOptions = {
         name: token.name as string,
         role: token.role as string,
         image: token.image as string,
+        avatar: token.image as string,
       };
       session.accessToken = token.accessToken as string;
       return session;

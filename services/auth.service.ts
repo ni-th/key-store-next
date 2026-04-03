@@ -1,12 +1,6 @@
 // services/auth.service.ts
 import { apiClient } from '@/lib/api-client';
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-}
+import { User } from '@/types/types';
 
 class AuthService {
   private user: User | null = null;
