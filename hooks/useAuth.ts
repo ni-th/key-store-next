@@ -1,5 +1,6 @@
 // hooks/useAuth.ts
 import { useEffect, useState } from 'react';
+import { signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/services/auth.service';
 import { apiClient } from '@/lib/api-client';
@@ -43,10 +44,12 @@ export function useAuth() {
 
   const logout = async () => {
     await authService.logout();
+    await signOut({ redirect: false });
     setUser(null);
     setIsAuthenticated(false);
     // Use Next.js router
     router.push('/login');
+    router.refresh();
   };
 
   return {

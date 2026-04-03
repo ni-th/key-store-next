@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { Moon, ShoppingCart, Sun } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Navbar() {
   const { data: session } = useSession();
-  const router = useRouter();
+  const { logout } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -49,23 +49,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     setIsMenuOpen(false);
-
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-
-    if (apiBaseUrl) {
-      try {
-        await fetch(`${apiBaseUrl}/api/auth/logout`, {
-          method: "POST",
-          credentials: "include",
-        });
-      } catch (error) {
-        console.error("Backend logout failed:", error);
-      }
-    }
-
-    await signOut({ redirect: false });
-    router.push("/login");
-    router.refresh();
+    await logout();
   };
 
   return (
