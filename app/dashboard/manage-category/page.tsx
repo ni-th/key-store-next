@@ -10,6 +10,14 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, DataTableColumn } from "@/components/ui/data-table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -56,7 +64,10 @@ function getErrorMessage(error: unknown): string {
 export default function ManageCategoryPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [form, setForm] = useState<FormState>(initialFormState);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<FormState>(initialFormState);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [page, setPage] = useState<number>(DEFAULT_PAGE);
   const [limit] = useState<number>(DEFAULT_LIMIT);
   const [searchInput, setSearchInput] = useState<string>("");
@@ -74,6 +85,7 @@ export default function ManageCategoryPage() {
   });
   const [listLoading, setListLoading] = useState<boolean>(true);
   const [submitLoading, setSubmitLoading] = useState<boolean>(false);
+  const [editSubmitLoading, setEditSubmitLoading] = useState<boolean>(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
@@ -102,14 +114,14 @@ export default function ManageCategoryPage() {
       cellClassName: "px-3 py-2",
       render: (category) => (
         <div className="flex justify-end gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={() => handleEdit(category)}>
+          <Button type="button" size="sm" variant="outline" onClick={() => handleEditOpen(category)}>
             Edit
           </Button>
           <Button
             type="button"
             size="sm"
             variant="destructive"
-            onClick={() => handleDelete(category.id)}
+            onClick={() => handleDeleteOpen(category)}
             disabled={deletingId === category.id}
           >
             {deletingId === category.id ? "Deleting..." : "Delete"}
@@ -166,7 +178,6 @@ export default function ManageCategoryPage() {
 
   const resetForm = () => {
     setForm(initialFormState);
-    setEditingId(null);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -181,13 +192,8 @@ export default function ManageCategoryPage() {
     };
 
     try {
-      if (editingId !== null) {
-        await categoryService.updateCategory(editingId, payload);
-        setSuccessMessage("Category updated successfully.");
-      } else {
-        await categoryService.createCategory(payload);
-        setSuccessMessage("Category created successfully.");
-      }
+      await categoryService.createCategory(payload);
+      setSuccessMessage("Category created successfully.");
 
       resetForm();
       await loadCategories(page);
@@ -198,28 +204,65 @@ export default function ManageCategoryPage() {
     }
   };
 
-  const handleEdit = (category: Category) => {
-    setEditingId(category.id);
-    setForm({
+  const handleEditOpen = (category: Category) => {
+    setSelectedCategory(category);
+    setEditForm({
       name: category.name,
       description: category.description,
     });
+    setEditDialogOpen(true);
     setSuccessMessage("");
     setErrorMessage("");
   };
 
-  const handleDelete = async (id: number) => {
-    const shouldDelete = window.confirm("Delete this category?");
-    if (!shouldDelete) {
+  const handleEditSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedCategory) {
       return;
     }
 
-    setDeletingId(id);
+    setEditSubmitLoading(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    const payload: CategoryFormPayload = {
+      name: editForm.name.trim(),
+      description: editForm.description.trim(),
+    };
+
+    try {
+      await categoryService.updateCategory(selectedCategory.id, payload);
+      setEditDialogOpen(false);
+      setSelectedCategory(null);
+      setSuccessMessage("Category updated successfully.");
+      await loadCategories(page);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setEditSubmitLoading(false);
+    }
+  };
+
+  const handleDeleteOpen = (category: Category) => {
+    setSelectedCategory(category);
+    setDeleteDialogOpen(true);
+    setSuccessMessage("");
+    setErrorMessage("");
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedCategory) {
+      return;
+    }
+
+    setDeletingId(selectedCategory.id);
     setErrorMessage("");
     setSuccessMessage("");
 
     try {
-      await categoryService.deleteCategory(id);
+      await categoryService.deleteCategory(selectedCategory.id);
+      setDeleteDialogOpen(false);
+      setSelectedCategory(null);
       setSuccessMessage("Category deleted successfully.");
       await loadCategories(page);
     } catch (error) {
@@ -233,12 +276,8 @@ export default function ManageCategoryPage() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>{editingId !== null ? "Update Category" : "Create Category"}</CardTitle>
-          <CardDescription>
-            {editingId !== null
-              ? "Edit the selected category and save your changes."
-              : "Create a new category for organizing products."}
-          </CardDescription>
+          <CardTitle>Create Category</CardTitle>
+          <CardDescription>Create a new category for organizing products.</CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -271,14 +310,8 @@ export default function ManageCategoryPage() {
 
             <div className="flex flex-wrap items-center gap-2">
               <Button type="submit" disabled={submitLoading}>
-                {submitLoading ? "Saving..." : editingId !== null ? "Update Category" : "Create Category"}
+                {submitLoading ? "Saving..." : "Create Category"}
               </Button>
-
-              {editingId !== null && (
-                <Button type="button" variant="outline" onClick={resetForm} disabled={submitLoading}>
-                  Cancel Editing
-                </Button>
-              )}
             </div>
           </form>
         </CardContent>
@@ -356,6 +389,92 @@ export default function ManageCategoryPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) {
+            setEditForm(initialFormState);
+            setSelectedCategory(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+            <DialogDescription>Update the category details and save your changes.</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleEditSubmit} className="grid gap-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                value={editForm.name}
+                onChange={(event) =>
+                  setEditForm((previous) => ({ ...previous, name: event.target.value }))
+                }
+                maxLength={120}
+                placeholder="Category name"
+                required
+              />
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-description">Description</Label>
+              <textarea
+                id="edit-description"
+                value={editForm.description}
+                onChange={(event) =>
+                  setEditForm((previous) => ({ ...previous, description: event.target.value }))
+                }
+                placeholder="Category description"
+                className="min-h-24 rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                required
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="submit" disabled={editSubmitLoading}>
+                {editSubmitLoading ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setSelectedCategory(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Category</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete
+              {selectedCategory ? ` "${selectedCategory.name}"` : " this category"}? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter showCloseButton>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deletingId === selectedCategory?.id}
+            >
+              {deletingId === selectedCategory?.id ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
