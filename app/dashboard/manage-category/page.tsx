@@ -10,6 +10,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, DataTableColumn } from "@/components/ui/data-table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -344,15 +345,17 @@ export default function ManageCategoryPage() {
           </div>
 
           {errorMessage ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {errorMessage}
-            </div>
+            <Alert variant="destructive">
+              <AlertTitle>Request Failed</AlertTitle>
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
           ) : null}
 
           {successMessage ? (
-            <div className="rounded-lg border border-emerald-600/20 bg-emerald-600/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
-              {successMessage}
-            </div>
+            <Alert className="border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:text-emerald-300">
+              <AlertTitle>Success</AlertTitle>
+              <AlertDescription className="text-inherit">{successMessage}</AlertDescription>
+            </Alert>
           ) : null}
 
           <DataTable
