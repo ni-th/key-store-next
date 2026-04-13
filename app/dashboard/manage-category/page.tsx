@@ -7,10 +7,11 @@ import type {
   CategoryFormPayload,
   PaginationMeta,
 } from "@/types/types";
+import type { CommonAlertVariant } from "@/components/ui/common-alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, DataTableColumn } from "@/components/ui/data-table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CommonAlertDialog } from "@/components/ui/common-alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -88,8 +89,10 @@ export default function ManageCategoryPage() {
   const [submitLoading, setSubmitLoading] = useState<boolean>(false);
   const [editSubmitLoading, setEditSubmitLoading] = useState<boolean>(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  const [successMessage, setSuccessMessage] = useState<string>("");
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState<boolean>(false);
+  const [feedbackVariant, setFeedbackVariant] = useState<CommonAlertVariant>("success");
+  const [feedbackTitle, setFeedbackTitle] = useState<string>("Success");
+  const [feedbackMessage, setFeedbackMessage] = useState<string>("");
 
   const columns: DataTableColumn<Category>[] = [
     {
@@ -100,21 +103,22 @@ export default function ManageCategoryPage() {
     {
       key: "name",
       header: "Name",
+      cellClassName: "px-3 py-2 whitespace-normal break-words",
       render: (category) => category.name,
     },
     {
       key: "description",
       header: "Description",
-      cellClassName: "px-3 py-2 text-muted-foreground",
+      cellClassName: "px-3 py-2 text-muted-foreground whitespace-normal break-words",
       render: (category) => category.description,
     },
     {
       key: "actions",
       header: "Actions",
       headerClassName: "px-3 py-2 text-right font-medium",
-      cellClassName: "px-3 py-2",
+      cellClassName: "px-3 py-2 align-top",
       render: (category) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" size="sm" variant="outline" onClick={() => handleEditOpen(category)}>
             Edit
           </Button>
@@ -150,9 +154,19 @@ export default function ManageCategoryPage() {
     void loadCategories(page);
   }, [page, sort, search]);
 
+  const showFeedback = (
+    variant: CommonAlertVariant,
+    title: string,
+    message: string
+  ) => {
+    setFeedbackVariant(variant);
+    setFeedbackTitle(title);
+    setFeedbackMessage(message);
+    setFeedbackDialogOpen(true);
+  };
+
   const loadCategories = async (targetPage: number) => {
     setListLoading(true);
-    setErrorMessage("");
 
     try {
       const response = await categoryService.getCategories({
@@ -171,7 +185,7 @@ export default function ManageCategoryPage() {
         setPage(previousPage);
       }
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      showFeedback("warning", "Request Failed", getErrorMessage(error));
     } finally {
       setListLoading(false);
     }
@@ -184,8 +198,6 @@ export default function ManageCategoryPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitLoading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
 
     const payload: CategoryFormPayload = {
       name: form.name.trim(),
@@ -194,12 +206,12 @@ export default function ManageCategoryPage() {
 
     try {
       await categoryService.createCategory(payload);
-      setSuccessMessage("Category created successfully.");
+      showFeedback("success", "Success", "Category created successfully.");
 
       resetForm();
       await loadCategories(page);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      showFeedback("warning", "Request Failed", getErrorMessage(error));
     } finally {
       setSubmitLoading(false);
     }
@@ -212,8 +224,6 @@ export default function ManageCategoryPage() {
       description: category.description,
     });
     setEditDialogOpen(true);
-    setSuccessMessage("");
-    setErrorMessage("");
   };
 
   const handleEditSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -223,8 +233,6 @@ export default function ManageCategoryPage() {
     }
 
     setEditSubmitLoading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
 
     const payload: CategoryFormPayload = {
       name: editForm.name.trim(),
@@ -235,10 +243,10 @@ export default function ManageCategoryPage() {
       await categoryService.updateCategory(selectedCategory.id, payload);
       setEditDialogOpen(false);
       setSelectedCategory(null);
-      setSuccessMessage("Category updated successfully.");
+      showFeedback("success", "Success", "Category updated successfully.");
       await loadCategories(page);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      showFeedback("warning", "Request Failed", getErrorMessage(error));
     } finally {
       setEditSubmitLoading(false);
     }
@@ -247,8 +255,6 @@ export default function ManageCategoryPage() {
   const handleDeleteOpen = (category: Category) => {
     setSelectedCategory(category);
     setDeleteDialogOpen(true);
-    setSuccessMessage("");
-    setErrorMessage("");
   };
 
   const handleDeleteConfirm = async () => {
@@ -257,17 +263,15 @@ export default function ManageCategoryPage() {
     }
 
     setDeletingId(selectedCategory.id);
-    setErrorMessage("");
-    setSuccessMessage("");
 
     try {
       await categoryService.deleteCategory(selectedCategory.id);
       setDeleteDialogOpen(false);
       setSelectedCategory(null);
-      setSuccessMessage("Category deleted successfully.");
+      showFeedback("success", "Success", "Category deleted successfully.");
       await loadCategories(page);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      showFeedback("warning", "Request Failed", getErrorMessage(error));
     } finally {
       setDeletingId(null);
     }
@@ -339,24 +343,10 @@ export default function ManageCategoryPage() {
               onChange={(event) => setSort(event.target.value)}
               className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             >
-              <option value="DESC">Desc Created At</option>
-              <option value="createdAt:asc">Asc Created At</option>
+              <option value="DESC">Desc</option>
+              <option value="createdAt:asc">Asc</option>
             </select>
           </div>
-
-          {errorMessage ? (
-            <Alert variant="destructive">
-              <AlertTitle>Request Failed</AlertTitle>
-              <AlertDescription>{errorMessage}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {successMessage ? (
-            <Alert className="border-emerald-600/20 bg-emerald-600/10 text-emerald-700 dark:text-emerald-300">
-              <AlertTitle>Success</AlertTitle>
-              <AlertDescription className="text-inherit">{successMessage}</AlertDescription>
-            </Alert>
-          ) : null}
 
           <DataTable
             columns={columns}
@@ -447,7 +437,18 @@ export default function ManageCategoryPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <CommonAlertDialog
+        open={feedbackDialogOpen}
+        onOpenChange={setFeedbackDialogOpen}
+        variant={feedbackVariant}
+        title={feedbackTitle}
+        description={feedbackMessage}
+        hideCancel
+        confirmText="Okay"
+        onConfirm={() => setFeedbackDialogOpen(false)}
+      />
+
+      <CommonAlertDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {
           setDeleteDialogOpen(open);
@@ -455,29 +456,16 @@ export default function ManageCategoryPage() {
             setSelectedCategory(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Category</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete
-              {selectedCategory ? ` "${selectedCategory.name}"` : " this category"}? This action cannot be
-              undone.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter showCloseButton>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDeleteConfirm}
-              disabled={deletingId === selectedCategory?.id}
-            >
-              {deletingId === selectedCategory?.id ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        variant="delete"
+        title="Delete Category"
+        description={
+          selectedCategory
+            ? `Are you sure you want to delete "${selectedCategory.name}"? This action cannot be undone.`
+            : "Are you sure you want to delete this category? This action cannot be undone."
+        }
+        onConfirm={handleDeleteConfirm}
+        confirmLoading={deletingId === selectedCategory?.id}
+      />
     </div>
   );
 }

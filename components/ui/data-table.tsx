@@ -25,7 +25,7 @@ export function DataTable<T>({
   isLoading = false,
   loadingText = "Loading...",
   emptyText = "No data found.",
-  tableClassName = "w-full min-w-160 text-sm",
+  tableClassName = "w-full table-auto text-sm",
 }: DataTableProps<T>) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
