@@ -7,7 +7,7 @@ import { apiClient } from '@/lib/api-client';
 
 export function useAuth() {
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
@@ -16,11 +16,9 @@ export function useAuth() {
     apiClient.setRouter(router);
   }, [router]);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
   const checkAuth = async () => {
+    setLoading(true);
+
     try {
       const userData = await authService.getProfile();
       setUser(userData);

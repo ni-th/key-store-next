@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { logout } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -44,6 +44,7 @@ export default function Navbar() {
   }, []);
 
   const isDark = resolvedTheme === "dark";
+  const isSessionLoading = status === "loading";
   const userInitial = session?.user?.name?.[0]?.toUpperCase() || "U";
   const userImage = session?.user?.image || session?.user?.avatar;
 
@@ -75,7 +76,12 @@ export default function Navbar() {
             </Link>
           </Button>
 
-          {session?.user ? (
+          {isSessionLoading ? (
+            <div
+              className="h-9 w-9 animate-pulse rounded-full bg-muted"
+              aria-label="Loading user session"
+            />
+          ) : session?.user ? (
             <div className="relative" ref={menuRef}>
               <Button
                 variant="ghost"
