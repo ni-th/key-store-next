@@ -6,13 +6,19 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldContent, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+type LoginFormErrors = {
+  email?: string;
+  password?: string;
+};
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [formErrors, setFormErrors] = useState<LoginFormErrors>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -25,6 +31,20 @@ export default function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const nextErrors: LoginFormErrors = {};
+    if (!email.trim()) {
+      nextErrors.email = "Email is required.";
+    }
+    if (!password.trim()) {
+      nextErrors.password = "Password is required.";
+    }
+
+    setFormErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+
     setError("");
     setLoading(true);
 
@@ -170,7 +190,7 @@ export default function LoginForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
             {error && (
               <Alert variant="destructive">
                 <AlertTitle>Login failed</AlertTitle>
@@ -178,35 +198,57 @@ export default function LoginForm() {
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                suppressHydrationWarning
-              />
-            </div>
+            <FieldSet>
+              <FieldGroup>
+                <Field data-invalid={Boolean(formErrors.email)}>
+                  <FieldLabel htmlFor="email">Email *</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (formErrors.email) {
+                          setFormErrors((previous) => ({ ...previous, email: "" }));
+                        }
+                      }}
+                      placeholder="you@example.com"
+                      aria-invalid={Boolean(formErrors.email)}
+                      suppressHydrationWarning
+                    />
+                    <FieldError>{formErrors.email}</FieldError>
+                  </FieldContent>
+                </Field>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                suppressHydrationWarning
-              />
-            </div>
+                <Field data-invalid={Boolean(formErrors.password)}>
+                  <FieldLabel htmlFor="password">Password *</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (formErrors.password) {
+                          setFormErrors((previous) => ({ ...previous, password: "" }));
+                        }
+                      }}
+                      placeholder="••••••••"
+                      aria-invalid={Boolean(formErrors.password)}
+                      suppressHydrationWarning
+                    />
+                    <FieldError>{formErrors.password}</FieldError>
+                  </FieldContent>
+                </Field>
+              </FieldGroup>
+            </FieldSet>
 
             <Button type="submit" disabled={loading} className="w-full">
               {loading ? "Signing in..." : "Sign in"}

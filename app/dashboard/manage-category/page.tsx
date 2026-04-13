@@ -13,6 +13,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DataTable, DataTableColumn } from "@/components/ui/data-table";
 import { CommonAlertDialog } from "@/components/ui/common-alert-dialog";
 import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+} from "@/components/ui/field";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -21,7 +29,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -31,7 +38,14 @@ type FormState = {
   description: string;
 };
 
+type FormErrors = Partial<Record<keyof FormState, string>>;
+
 const initialFormState: FormState = {
+  name: "",
+  description: "",
+};
+
+const initialFormErrors: FormErrors = {
   name: "",
   description: "",
 };
@@ -63,10 +77,26 @@ function getErrorMessage(error: unknown): string {
   return "Something went wrong. Please try again.";
 }
 
+function validateCategoryForm(formState: FormState): FormErrors {
+  const errors: FormErrors = {};
+
+  if (!formState.name.trim()) {
+    errors.name = "Name is required.";
+  }
+
+  if (!formState.description.trim()) {
+    errors.description = "Description is required.";
+  }
+
+  return errors;
+}
+
 export default function ManageCategoryPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [form, setForm] = useState<FormState>(initialFormState);
+  const [formErrors, setFormErrors] = useState<FormErrors>(initialFormErrors);
   const [editForm, setEditForm] = useState<FormState>(initialFormState);
+  const [editFormErrors, setEditFormErrors] = useState<FormErrors>(initialFormErrors);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState<boolean>(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
@@ -193,10 +223,19 @@ export default function ManageCategoryPage() {
 
   const resetForm = () => {
     setForm(initialFormState);
+    setFormErrors(initialFormErrors);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const nextErrors = validateCategoryForm(form);
+    setFormErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+
     setSubmitLoading(true);
 
     const payload: CategoryFormPayload = {
@@ -223,12 +262,20 @@ export default function ManageCategoryPage() {
       name: category.name,
       description: category.description,
     });
+    setEditFormErrors(initialFormErrors);
     setEditDialogOpen(true);
   };
 
   const handleEditSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedCategory) {
+      return;
+    }
+
+    const nextErrors = validateCategoryForm(editForm);
+    setEditFormErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
@@ -286,32 +333,54 @@ export default function ManageCategoryPage() {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="name">Name</Label>
+          <form onSubmit={handleSubmit} className="grid gap-4" noValidate>
+            <FieldSet>
+              <FieldGroup>
+            <Field data-invalid={Boolean(formErrors.name)}>
+              <FieldLabel htmlFor="name">Name *</FieldLabel>
+              <FieldContent>
               <Input
                 id="name"
                 value={form.name}
-                onChange={(event) => setForm((previous) => ({ ...previous, name: event.target.value }))}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setForm((previous) => ({ ...previous, name: value }));
+                  if (formErrors.name) {
+                    setFormErrors((previous) => ({ ...previous, name: "" }));
+                  }
+                }}
                 maxLength={120}
                 placeholder="Category name"
                 required
+                aria-invalid={Boolean(formErrors.name)}
               />
-            </div>
+              <FieldError>{formErrors.name}</FieldError>
+              </FieldContent>
+            </Field>
 
-            <div className="grid gap-1.5">
-              <Label htmlFor="description">Description</Label>
+            <Field data-invalid={Boolean(formErrors.description)}>
+              <FieldLabel htmlFor="description">Description *</FieldLabel>
+              <FieldContent>
               <textarea
                 id="description"
                 value={form.description}
-                onChange={(event) =>
-                  setForm((previous) => ({ ...previous, description: event.target.value }))
-                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setForm((previous) => ({ ...previous, description: value }));
+                  if (formErrors.description) {
+                    setFormErrors((previous) => ({ ...previous, description: "" }));
+                  }
+                }}
                 placeholder="Category description"
                 className="min-h-24 rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 required
+                aria-invalid={Boolean(formErrors.description)}
               />
-            </div>
+              <FieldError>{formErrors.description}</FieldError>
+              </FieldContent>
+            </Field>
+              </FieldGroup>
+            </FieldSet>
 
             <div className="flex flex-wrap items-center gap-2">
               <Button type="submit" disabled={submitLoading}>
@@ -399,34 +468,54 @@ export default function ManageCategoryPage() {
             <DialogDescription>Update the category details and save your changes.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleEditSubmit} className="grid gap-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="edit-name">Name</Label>
+          <form onSubmit={handleEditSubmit} className="grid gap-4" noValidate>
+            <FieldSet>
+              <FieldGroup>
+            <Field data-invalid={Boolean(editFormErrors.name)}>
+              <FieldLabel htmlFor="edit-name">Name *</FieldLabel>
+              <FieldContent>
               <Input
                 id="edit-name"
                 value={editForm.name}
-                onChange={(event) =>
-                  setEditForm((previous) => ({ ...previous, name: event.target.value }))
-                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setEditForm((previous) => ({ ...previous, name: value }));
+                  if (editFormErrors.name) {
+                    setEditFormErrors((previous) => ({ ...previous, name: "" }));
+                  }
+                }}
                 maxLength={120}
                 placeholder="Category name"
                 required
+                aria-invalid={Boolean(editFormErrors.name)}
               />
-            </div>
+              <FieldError>{editFormErrors.name}</FieldError>
+              </FieldContent>
+            </Field>
 
-            <div className="grid gap-1.5">
-              <Label htmlFor="edit-description">Description</Label>
+            <Field data-invalid={Boolean(editFormErrors.description)}>
+              <FieldLabel htmlFor="edit-description">Description *</FieldLabel>
+              <FieldContent>
               <textarea
                 id="edit-description"
                 value={editForm.description}
-                onChange={(event) =>
-                  setEditForm((previous) => ({ ...previous, description: event.target.value }))
-                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setEditForm((previous) => ({ ...previous, description: value }));
+                  if (editFormErrors.description) {
+                    setEditFormErrors((previous) => ({ ...previous, description: "" }));
+                  }
+                }}
                 placeholder="Category description"
                 className="min-h-24 rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 required
+                aria-invalid={Boolean(editFormErrors.description)}
               />
-            </div>
+              <FieldError>{editFormErrors.description}</FieldError>
+              </FieldContent>
+            </Field>
+              </FieldGroup>
+            </FieldSet>
 
             <DialogFooter>
               <Button type="submit" disabled={editSubmitLoading}>
