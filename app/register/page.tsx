@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { FcGoogle } from "react-icons/fc";
 import api from "@/lib/api-client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -273,10 +274,11 @@ export default function RegisterPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="w-full justify-center gap-2"
               disabled={googleLoading}
               onClick={handleGoogleLogin}
             >
+              <FcGoogle className="size-4 shrink-0" aria-hidden="true" />
               {googleLoading ? "Connecting to Google..." : "Continue with Google"}
             </Button>
           </form>

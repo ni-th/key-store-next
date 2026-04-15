@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldContent, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
@@ -257,10 +258,11 @@ export default function LoginForm() {
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="w-full justify-center gap-2"
               disabled={googleLoading}
               onClick={handleGoogleLogin}
             >
+              <FcGoogle className="size-4 shrink-0" aria-hidden="true" />
               {googleLoading ? "Connecting to Google..." : "Continue with Google"}
             </Button>
           </form>
