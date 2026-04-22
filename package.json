@@ -37,7 +37,8 @@
   },
   "pnpm": {
     "overrides": {
-      "brace-expansion": "1.1.13"
+      "brace-expansion": "1.1.13",
+      "hono@<4.12.14": ">=4.12.14"
     }
   }
 }
